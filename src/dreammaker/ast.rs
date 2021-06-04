@@ -4,12 +4,14 @@
 use std::fmt;
 use std::iter::FromIterator;
 use phf::phf_map;
+use serde::Serialize;
+use serde::ser::SerializeStruct;
 
 use linked_hash_map::LinkedHashMap;
 
 use crate::error::Location;
 
-#[derive(Copy, Clone, Eq, Debug)]
+#[derive(Copy, Clone, Eq, Debug, Serialize)]
 pub struct Spanned<T> {
     // TODO: add a Span type and use it here
     pub location: Location,
@@ -30,7 +32,7 @@ impl<T> Spanned<T> {
 }
 
 /// The unary operators, both prefix and postfix.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize)]
 pub enum UnaryOp {
     Neg,
     Not,
@@ -87,7 +89,7 @@ pub type Ident = String;
 /// The DM path operators.
 ///
 /// Which path operator is used typically only matters at the start of a path.
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug, Serialize)]
 pub enum PathOp {
     /// `/` for absolute pathing.
     Slash,
@@ -142,7 +144,7 @@ impl<'a> fmt::Display for FormatTypePath<'a> {
 }
 
 /// The binary operators.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -201,7 +203,7 @@ impl fmt::Display for BinaryOp {
 }
 
 /// The assignment operators, including augmented assignment.
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Serialize)]
 pub enum AssignOp {
     Assign,
     AddAssign,
@@ -298,6 +300,22 @@ impl From<TypePath> for Prefab {
     }
 }
 
+impl serde::ser::Serialize for Prefab {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let mut vars: Vec<(&Ident, &Expression)> = Vec::new();
+        for (ident, val) in &self.vars {
+            vars.push((ident, val));
+        }
+        let mut state = serializer.serialize_struct("Prefab", 2)?;
+        state.serialize_field("path", &self.path)?;
+        state.serialize_field("vars", &vars)?;
+        state.end()
+    }
+}
+
 /// Formatting helper for variable arrays.
 pub struct FormatVars<'a, E>(pub &'a LinkedHashMap<Ident, E>);
 
@@ -320,7 +338,7 @@ impl<'a, E: fmt::Display> fmt::Display for FormatVars<'a, E> {
 }
 
 /// The different forms of the `new` command.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub enum NewType {
     /// Implicit type, taken from context.
     Implicit,
@@ -334,7 +352,7 @@ pub enum NewType {
 }
 
 /// The structure of an expression, a tree of terms and operators.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub enum Expression {
     /// An expression containing a term directly. The term is evaluated first,
     /// then its follows, then its unary operators in reverse order.
@@ -499,7 +517,7 @@ impl From<Term> for Expression {
 }
 
 /// The structure of a term, the basic building block of the AST.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub enum Term {
     // Terms with no recursive contents ---------------------------------------
     /// The literal `null`.
@@ -640,7 +658,7 @@ impl From<Expression> for Term {
 }
 
 /// The possible kinds of index operators, for both fields and methods.
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize)]
 pub enum IndexKind {
     /// `a.b`
     Dot,
@@ -670,7 +688,7 @@ impl fmt::Display for IndexKind {
 }
 
 /// An expression part which is applied to a term or another follow.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Follow {
     /// Index the value by an expression.
     Index(Box<Expression>),
@@ -681,7 +699,7 @@ pub enum Follow {
 }
 
 /// Like a `Follow` but supports index or fields only.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum IndexOrField {
     /// Index the value by an expression.
     Index(Box<Expression>),
@@ -703,7 +721,7 @@ impl From<IndexOrField> for Follow {
 /// DM requires referencing proc paths to include whether the target is
 /// declared as a proc or verb, even though the two modes are functionally
 /// identical in many other respects.
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash, Serialize)]
 pub enum ProcDeclKind {
     Proc,
     Verb,
@@ -740,7 +758,7 @@ impl fmt::Display for ProcDeclKind {
 }
 
 /// A parameter declaration in the header of a proc.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
 pub struct Parameter {
     pub var_type: VarType,
     pub name: Ident,
@@ -801,6 +819,7 @@ macro_rules! type_table {
 
 type_table! {
     /// A type specifier for verb arguments and input() calls.
+    #[derive(Serialize)]
     pub struct InputType;
 
     // These values can be known with an invocation such as:
@@ -824,7 +843,7 @@ type_table! {
 }
 
 bitflags! {
-    #[derive(Default)]
+    #[derive(Default, Serialize)]
     pub struct VarTypeFlags: u8 {
         // DM flags
         const STATIC = 1 << 0;
@@ -930,7 +949,7 @@ impl fmt::Display for VarTypeFlags {
 }
 
 /// A type which may be ascribed to a `var`.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
 pub struct VarType {
     pub flags: VarTypeFlags,
     pub type_path: TreePath,
@@ -1016,7 +1035,7 @@ impl VarSuffix {
 pub type Block = Box<[Spanned<Statement>]>;
 
 /// A statement in a proc body.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Statement {
     Expr(Expression),
     Return(Option<Expression>),
@@ -1088,14 +1107,14 @@ pub enum Statement {
     Crash(Expression),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct VarStatement {
     pub var_type: VarType,
     pub name: Ident,
     pub value: Option<Expression>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub enum SettingMode {
     /// As in `set name = "Use"`.
     Assign,
@@ -1119,7 +1138,7 @@ impl fmt::Display for SettingMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum Case {
     Exact(Expression),
     Range(Expression, Expression),

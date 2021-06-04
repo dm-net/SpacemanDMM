@@ -2,6 +2,7 @@
 
 use std::collections::BTreeMap;
 use std::fmt;
+use serde::Serialize;
 
 use linked_hash_map::LinkedHashMap;
 
@@ -14,13 +15,13 @@ use super::{DMError, Location, Context, Severity};
 // Symbol IDs
 
 /// An identifier referring to a symbol in the object tree.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct SymbolId(u32);
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct SymbolIdSource(SymbolId);
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize)]
 pub enum SymbolIdCategory {
     ObjectTree,
     Preprocessor,
@@ -46,14 +47,14 @@ impl SymbolIdSource {
 
 pub type Vars = LinkedHashMap<String, Constant>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct VarDeclaration {
     pub var_type: VarType,
     pub location: Location,
     pub id: SymbolId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct VarValue {
     pub location: Location,
     /// Syntactic value, as specified in the source.
@@ -61,6 +62,7 @@ pub struct VarValue {
     /// Evaluated value for non-static and non-tmp vars.
     pub constant: Option<Constant>,
     pub being_evaluated: bool,
+    #[serde(skip_serializing)]
     pub docs: DocCollection,
 }
 
@@ -70,7 +72,7 @@ pub struct TypeVar {
     pub declaration: Option<VarDeclaration>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProcDeclaration {
     pub location: Location,
     pub kind: ProcDeclKind,
@@ -79,15 +81,16 @@ pub struct ProcDeclaration {
     pub is_protected: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProcValue {
     pub location: Location,
     pub parameters: Vec<Parameter>,
+    #[serde(skip_serializing)]
     pub docs: DocCollection,
     pub code: Code,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Code {
     Present(Block),
     Invalid(DMError),

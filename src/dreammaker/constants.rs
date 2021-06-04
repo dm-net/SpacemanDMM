@@ -2,6 +2,8 @@
 use std::fmt;
 use std::ops;
 use std::path::Path;
+use serde::Serialize;
+use serde::ser::SerializeStruct;
 
 use linked_hash_map::LinkedHashMap;
 use ordered_float::OrderedFloat;
@@ -36,11 +38,27 @@ impl fmt::Display for Pop {
     }
 }
 
+impl serde::ser::Serialize for Pop {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        let mut vars: Vec<(&Ident, &Constant)> = Vec::new();
+        for (ident, val) in &self.vars {
+            vars.push((ident, val));
+        }
+        let mut state = serializer.serialize_struct("Pop", 2)?;
+        state.serialize_field("path", &self.path)?;
+        state.serialize_field("vars", &vars)?;
+        state.end()
+    }
+}
+
 /// A DM constant, usually a literal or simple combination of other constants.
 ///
 /// This is intended to represent the degree to which constants are evaluated
 /// before being displayed in DreamMaker.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Constant {
     /// The literal `null`.
     Null(Option<TreePath>),
@@ -108,7 +126,7 @@ impl std::cmp::PartialEq for Constant {
 impl std::cmp::Eq for Constant {}
 
 /// The constant functions which are represented as-is.
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize)]
 pub enum ConstFn {
     /// The `icon()` type constructor.
     Icon,
