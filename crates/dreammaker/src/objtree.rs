@@ -5,6 +5,7 @@ use std::fmt;
 
 use indexmap::IndexMap;
 use ahash::RandomState;
+use serde::Serialize;
 
 use super::ast::{Expression, VarType, VarTypeBuilder, VarSuffix, PathOp, Parameter, Block, ProcDeclKind, Ident};
 use super::constants::Constant;
@@ -15,7 +16,7 @@ use super::{DMError, Location, Context, Severity};
 // Symbol IDs
 
 /// An identifier referring to a symbol in the object tree.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct SymbolId(u32);
 
 #[derive(Debug)]
@@ -47,14 +48,14 @@ impl SymbolIdSource {
 
 pub type Vars = IndexMap<String, Constant, RandomState>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct VarDeclaration {
     pub var_type: VarType,
     pub location: Location,
     pub id: SymbolId,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct VarValue {
     pub location: Location,
     /// Syntactic value, as specified in the source.
@@ -71,7 +72,7 @@ pub struct TypeVar {
     pub declaration: Option<VarDeclaration>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProcDeclaration {
     pub location: Location,
     pub kind: ProcDeclKind,
@@ -80,7 +81,7 @@ pub struct ProcDeclaration {
     pub is_protected: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ProcValue {
     pub location: Location,
     pub parameters: Box<[Parameter]>,

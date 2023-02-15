@@ -7,6 +7,7 @@ use indexmap::IndexMap;
 use ahash::RandomState;
 use ordered_float::OrderedFloat;
 use color_space::{Hsl, Hsv, Lch, Rgb};
+use serde::Serialize;
 
 use super::ast::*;
 use super::objtree::*;
@@ -18,9 +19,10 @@ pub type Arguments = [(Constant, Option<Constant>)];
 /// An absolute typepath and optional variables.
 ///
 /// The path may involve `/proc` or `/verb` references.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Pop {
     pub path: TreePath,
+    #[serde(skip_serializing)] // TODO: Make serializable
     pub vars: IndexMap<Ident, Constant, RandomState>,
 }
 
@@ -62,7 +64,7 @@ impl fmt::Display for Pop {
 ///
 /// This is intended to represent the degree to which constants are evaluated
 /// before being displayed in DreamMaker.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Constant {
     /// The literal `null`.
     Null(Option<TreePath>),
@@ -132,7 +134,7 @@ impl std::cmp::PartialEq for Constant {
 impl std::cmp::Eq for Constant {}
 
 /// The constant functions which are represented as-is.
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Serialize)]
 pub enum ConstFn {
     /// The `icon()` type constructor.
     Icon,

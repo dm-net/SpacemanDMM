@@ -7,12 +7,13 @@ use std::collections::HashMap;
 
 use ahash::RandomState;
 
+use serde::Serialize;
 use termcolor::{ColorSpec, Color};
 
 use crate::config::Config;
 
 /// An identifier referring to a loaded file.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct FileId(u16);
 
 const FILEID_BUILTINS: FileId = FileId(0x0000);
@@ -273,7 +274,7 @@ impl Context {
 // Location handling
 
 /// File, line, and column information for an error.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Default)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Default, Serialize)]
 pub struct Location {
     /// The index into the file table.
     pub file: FileId,
